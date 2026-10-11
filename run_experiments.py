@@ -1,10 +1,11 @@
-"""Siete configuraciones y una repetición; cambios controlados respecto al baseline."""
+"""Ejecuta siete configuraciones y repite el baseline con la misma semilla."""
 import json
 from pathlib import Path
 import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parent
+# Cada entrada contiene el nombre de la corrida y sus cambios respecto al valor por defecto.
 CONFIGS = [
     ('01_baseline', []),
     ('02_C_001', ['--C', '0.01']),
@@ -17,6 +18,7 @@ CONFIGS = [
 ]
 
 if __name__ == '__main__':
+    # Se reúnen únicamente los JSON creados por este lote.
     previous = set((ROOT / 'results').glob('*.json'))
     for name, args in CONFIGS:
         subprocess.run([sys.executable, str(ROOT / 'train.py'), '--run-name', name, *args], check=True)

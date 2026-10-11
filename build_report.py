@@ -36,18 +36,18 @@ def shot(name,caption,width=500):
 def footer(canvas,doc):
     canvas.setFont('Arial',11)
     canvas.setFillColor(colors.HexColor('#586577'))
-    canvas.drawString(50,28,'TC5061 | Experimentación con MLflow | 4 de octubre de 2026')
+    canvas.drawString(50,28,'TC5061 | Experimentación con MLflow | 10 de octubre de 2026')
     canvas.drawRightString(canvas._pagesize[0]-50,28,str(doc.page))
 
 p('Código de experimentación base con MLflow',heading)
 p('Francisco Vicente Eugenio Ponce · A01840479<br/>TC5061 · Actividad individual')
 p('Análisis de resultados',heading)
-p('Se migró la regresión logística del notebook a un script con funciones para carga, limpieza, partición, preprocesamiento, entrenamiento y evaluación. Se conservaron las 23 variables del baseline y sus filtros: 119,390 reservas originales se redujeron a 87,208. La imputación, el escalado y la codificación se ajustaron solo con entrenamiento.')
-p('Se usaron 52,324 reservas para entrenamiento, 17,442 para validación y 17,442 para prueba, con estratificación y semilla 42. Las siete configuraciones distintas y una repetición se registraron bajo TC5061_Hoteles_Logistica_Experimentacion. El criterio de selección fue F1 de validación, con umbral fijo de 0.5; la prueba se consultó después de elegir el modelo.')
-p('La mejor configuración por ese criterio fue <b>04_balanced: C=1, class_weight=balanced, tol=0.0001 y max_iter=1000</b>. Logró F1=0.5651, precisión=0.4698, recall=0.7090 y ROC-AUC=0.7696 en validación. El mismo modelo guardado, sin reentrenamiento, obtuvo F1=0.5665 y ROC-AUC=0.7770 en prueba.')
-p('El hiperparámetro más influyente sobre F1 fue <b>class_weight</b>: al cambiar únicamente de none a balanced, F1 subió de 0.4689 a 0.5651 (+0.0962) y recall de 0.3499 a 0.7090, pero la precisión bajó de 0.7105 a 0.4698. El ROC-AUC apenas cambió (0.7691 a 0.7696): no se observó una mejora apreciable del ordenamiento de las predicciones. El beneficio aparece en el equilibrio precisión-recall a umbral 0.5. El balanceo modifica la función de pérdida y puede cambiar los coeficientes; no equivale necesariamente a mover solo el umbral.')
-p('C tuvo un efecto pequeño en todo el rango 0.01-100: el rango de F1 fue 0.0107 sin balanceo y 0.0028 con balanceo. Aumentar tol a 0.01 redujo las iteraciones de 60 a 8; F1 subió 0.0071, pero ROC-AUC cayó 0.0064. No hubo una mejora general de las métricas.')
-p('Las limitaciones son una sola partición y semilla, ausencia de validación temporal y posible información tardía en booking_changes o peticiones especiales. Eliminar duplicados puede excluir reservas grupales legítimas. La prueba coincide con la usada en la semana anterior: no es evidencia completamente nueva. Las diferencias pequeñas de C no demuestran superioridad estadística. El balanceo detecta más cancelaciones a costa de falsas alarmas; antes de usarlo se requieren costos de negocio y datos posteriores.')
+p('Para esta actividad se tomó la regresión logística del notebook de semana 3 y se pasó a train.py. Se conservaron las 23 variables y las reglas de limpieza: de 119,390 reservas quedaron 87,208. El preprocesamiento se ajustó solo con los datos de entrenamiento.')
+p('Se usaron 52,324 reservas para entrenamiento, 17,442 para validación y 17,442 para prueba, con semilla 42. En el experimento TC5061_Hoteles_Logistica_Experimentacion de MLflow se registraron siete configuraciones distintas y una repetición del baseline. Se comparó el efecto de C, class_weight y tol, manteniendo max_iter=1000 y un umbral de 0.5. La selección se hizo con F1 de validación.')
+p('La mejor configuración fue <b>04_balanced: C=1, class_weight=balanced, tol=0.0001 y max_iter=1000</b>. En validación obtuvo F1=0.5651, precisión=0.4698, recall=0.7090 y ROC-AUC=0.7696. Después de elegirla, el modelo guardado se evaluó en prueba sin volver a entrenarlo: F1=0.5665 y ROC-AUC=0.7770.')
+p('El parámetro que más influyó fue <b>class_weight</b>. Al pasar de none a balanced con los demás valores iguales, F1 subió de 0.4689 a 0.5651 y recall de 0.3499 a 0.7090. Esto permitió detectar más cancelaciones, pero la precisión bajó de 0.7105 a 0.4698: también hubo más falsas alarmas. ROC-AUC cambió muy poco, de 0.7691 a 0.7696, por lo que la mejora de F1 no implica que todas las métricas hayan mejorado. El balanceo cambia el peso de las clases en la función de pérdida durante el entrenamiento; no equivale a mover únicamente el umbral de decisión.')
+p('Cambiar C entre 0.01 y 100 tuvo un efecto menor: F1 estuvo entre 0.4587 y 0.4694 sin balanceo, y entre 0.5623 y 0.5651 con balanceo. Al usar tol=0.01, el entrenamiento pasó de 60 a 8 iteraciones; F1 subió a 0.4760, pero ROC-AUC bajó a 0.7627. Su F1 fue menor que el de la configuración elegida.')
+p('Las pequeñas diferencias entre valores de C no demuestran superioridad estadística. Las principales limitaciones son usar una sola partición y semilla, y no probar con reservas de periodos posteriores. Algunas variables, como booking_changes, podrían contener información conocida después de la reserva. Además, quitar duplicados puede eliminar reservas grupales legítimas. La partición de prueba ya se había usado en semana 3, aunque aquí no se utilizó para elegir el modelo. Antes de usarlo con un hotel sería necesario revisar estas decisiones y el costo de las falsas alarmas.')
 page()
 p('Reproducibilidad, ejecución y repositorio',heading)
 if args.repo_url:
@@ -55,11 +55,12 @@ if args.repo_url:
     p(f'Repositorio individual: <link href="{url}" color="#175b91">{url}</link>')
 else:
     p('<b>Pendiente para entrega:</b> incorporar la URL del repositorio individual de GitHub y verificar el acceso del profesor. Esta versión es un borrador completo de resultados y evidencias.')
-p('Python 3.13.5; versiones fijadas en requirements.txt. Semilla 42 en Python, NumPy, las dos particiones y el modelo; cálculo numérico limitado a un hilo. La repetición obtuvo métricas y probabilidades exactamente iguales (diferencia máxima=0). Se verificaron particiones disjuntas y la carga del pipeline registrado. El hash SHA-256 del CSV y los índices de partición quedan registrados en MLflow.')
-p('<b>Comandos desde la carpeta del proyecto</b> (tras instalar requirements.txt y colocar el CSV según README):')
-for command in ['python train.py', 'python train.py --class-weight balanced', 'python run_experiments.py', 'python finalize_results.py', 'mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5001']:
+p('Se utilizó Python 3.13.5 y las versiones de requirements.txt. Se fijó semilla 42 en Python, NumPy, las particiones y el modelo, con un solo hilo de cálculo. La repetición produjo métricas y probabilidades idénticas (diferencia máxima=0), documentadas en results/summary.json. El SHA-256 del CSV se registra en MLflow para comprobar los datos utilizados.')
+p('Preparación y datos: seguir los pasos del README desde la raíz del proyecto, con el entorno virtual activo.')
+p('<b>Entrenamiento y comparación:</b>')
+for command in ['python train.py', 'python train.py --C 1 --class-weight balanced --tol 0.0001 --max-iter 1000 --seed 42', 'python run_experiments.py', 'python finalize_results.py', 'python -m mlflow ui --backend-store-uri sqlite:///mlflow.db --port 5001']:
     p(command,code)
-p('El segundo comando reproduce los hiperparámetros elegidos: los valores por defecto son C=1, tol=0.0001, max_iter=1000 y seed=42.')
+p('El segundo comando usa la configuración elegida. Para reproducir el lote, ejecutar run_experiments.py y después finalize_results.py. Abrir MLflow en http://127.0.0.1:5001.')
 p('Tabla de validación (métricas redondeadas)',heading)
 data=[['Corrida','C','Peso','tol','F1','Recall','AUC']]
 for r in rows:
@@ -73,14 +74,14 @@ p('Fuentes: <link href="https://www.kaggle.com/datasets/jessemostipak/hotel-book
 story.append(NextPageTemplate('landscape'))
 page()
 shot('runs_comparison_wide.jpg','Anexo A. Ocho corridas: hiperparámetros y métricas de validación',700)
-p('Siete configuraciones diferentes y una repetición, agrupadas en el mismo experimento. La mayor F1 corresponde a 04_balanced; 01 y 08 tienen el mismo resultado.')
+p('Las ocho corridas pertenecen al mismo experimento. 04_balanced tiene el mayor F1; 01 y 08 repiten la misma configuración y resultado.')
 page()
 shot('compare_parameters_wide.jpg','Anexo B. Vista Compare: detalles y parámetros de las ocho corridas',700)
-p('Vista Compare con Run details y Parameters abiertos. De izquierda a derecha: 08, 07, 06, 05, 04, 03, 02 y 01. Show diff only muestra C, class_weight y tol; las métricas de esas mismas corridas se muestran junto a los parámetros en el anexo A.')
+p('La vista Compare muestra los cambios de C, class_weight y tol. Las columnas corresponden a las corridas 08 a 01; sus métricas aparecen en el anexo A.')
 story.append(NextPageTemplate('portrait'))
 page()
 shot('run_artifacts.jpg','Anexo C. Detalle de 04_balanced y sus artefactos')
-p('Matriz de confusión de validación: TN=8,804; FP=3,840; FN=1,396; TP=3,402. También se registraron métricas JSON, índices de partición, código, dependencias y el pipeline completo mediante mlflow.sklearn.log_model.')
+p('La matriz de validación muestra 8,804 reservas no canceladas y 3,402 canceladas clasificadas correctamente, además de 3,840 falsas alarmas y 1,396 cancelaciones no detectadas. Se guardaron los artefactos y el pipeline completo con mlflow.sklearn.log_model.')
 output=ROOT/'output/pdf/TC5061_Experimentacion_MLFlow_EugenioFrancisco.pdf'
 doc = BaseDocTemplate(str(output), pagesize=letter, title='TC5061 - Experimentación con MLflow', author='Francisco Vicente Eugenio Ponce')
 doc.addPageTemplates([

@@ -1,7 +1,8 @@
-"""Entrenamiento reproducible del baseline de cancelaciones de hoteles."""
+"""Entrena una regresión logística para predecir cancelaciones y registra la corrida en MLflow."""
 import os
 os.environ.setdefault('MPLCONFIGDIR', '/tmp/tc5061-matplotlib')
 os.environ.setdefault('MLFLOW_DISABLE_AGENT_HINT', '1')
+# Un hilo ayuda a repetir el cálculo en el mismo entorno.
 for variable in ('OMP_NUM_THREADS', 'OPENBLAS_NUM_THREADS', 'MKL_NUM_THREADS'):
     os.environ[variable] = '1'
 
@@ -65,7 +66,7 @@ def parse_args():
 
 
 def load_and_clean(path):
-    """Replica las reglas del notebook antes de dividir los datos."""
+    """Carga el CSV y aplica las reglas de limpieza del notebook."""
     raw = pd.read_csv(path)
     required = set(NUMERIC + CATEGORICAL + ['is_canceled', 'agent', 'company']) - {'has_agent', 'has_company'}
     missing = required - set(raw.columns)
@@ -88,7 +89,7 @@ def load_and_clean(path):
 
 
 def split_data(df, seed):
-    """60/20/20 estratificado; prueba conserva la partición original de 20%."""
+    """Divide los datos en 60% entrenamiento, 20% validación y 20% prueba."""
     X, y = df[NUMERIC + CATEGORICAL], df.is_canceled
     X_dev, X_test, y_dev, y_test = train_test_split(X, y, test_size=.2, stratify=y, random_state=seed)
     X_train, X_val, y_train, y_val = train_test_split(X_dev, y_dev, test_size=.25, stratify=y_dev, random_state=seed)
@@ -96,6 +97,7 @@ def split_data(df, seed):
 
 
 def build_model(args):
+    """Une el preprocesamiento y la regresión logística en un pipeline."""
     preprocessing = ColumnTransformer([
         ('num', Pipeline([('impute', SimpleImputer(strategy='median')), ('scale', StandardScaler())]), NUMERIC),
         ('cat', Pipeline([('impute', SimpleImputer(strategy='most_frequent')),
@@ -107,6 +109,7 @@ def build_model(args):
 
 
 def evaluate(model, X, y):
+    """Calcula las mismas cinco métricas para cualquier corrida."""
     predicted = model.predict(X)
     probability = model.predict_proba(X)[:, 1]
     return {'accuracy': float(accuracy_score(y, predicted)),
@@ -117,13 +120,15 @@ def evaluate(model, X, y):
 
 
 def main():
+    """Ejecuta el entrenamiento con los argumentos de la terminal."""
     args = parse_args()
+    # La semilla se usa también al dividir los datos y crear el modelo.
     random.seed(args.seed)
     np.random.seed(args.seed)
     df, counts = load_and_clean(args.data)
     X_train, X_val, _, y_train, y_val, _ = split_data(df, args.seed)
     mlflow.set_tracking_uri(args.tracking_uri)
-    # SQLite almacena artefactos junto a su base; servidores remotos deciden su ubicación.
+    # El seguimiento local guarda la base y los artefactos en la carpeta del proyecto.
     experiment = mlflow.get_experiment_by_name(args.experiment)
     if experiment is None:
         location = args.artifact_location
@@ -142,6 +147,7 @@ def main():
         for name, value in params.items():
             mlflow.log_param(name, value)
         mlflow.set_tags({'stage': 'validation', 'selection_metric': 'val_f1', 'data_source': 'Kaggle/jessemostipak/hotel-booking-demand'})
+        # El pipeline ajusta el preprocesamiento solo con entrenamiento.
         with threadpool_limits(limits=1):
             model = build_model(args)
             model.fit(X_train, y_train)
@@ -164,6 +170,7 @@ def main():
                 mlflow.log_artifact(str(artifact), artifact_path='evaluation')
         mlflow.log_artifact(str(Path(__file__)), artifact_path='source')
         mlflow.log_artifact(str(ROOT / 'requirements.txt'), artifact_path='source')
+        # Se guarda el pipeline completo para poder cargarlo y predecir después.
         info = mlflow.sklearn.log_model(model, name='pipeline', serialization_format='cloudpickle', input_example=X_train.head(3),
                                        pip_requirements=str(ROOT / 'requirements.txt'))
         result = {'run_id': run.info.run_id, 'run_name': args.run_name, 'model_uri': info.model_uri,

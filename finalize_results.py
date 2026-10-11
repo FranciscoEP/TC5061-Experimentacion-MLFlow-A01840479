@@ -1,4 +1,4 @@
-"""Compara validación, verifica repetición y evalúa una sola vez el modelo elegido."""
+"""Compara las corridas, comprueba la repetición y evalúa el modelo elegido en prueba."""
 import train  # Configura hilos antes de importar librerías numéricas.
 import json
 import hashlib
@@ -13,6 +13,7 @@ ROOT = train.ROOT
 
 def main():
     runs = json.loads((ROOT / 'results/batch.json').read_text())
+    # La primera y la última corrida usan los mismos parámetros.
     base, repeat = runs[0], runs[-1]
     assert base['params'] == repeat['params']
     assert base['metrics'] == repeat['metrics'], 'Métricas distintas al repetir.'
@@ -23,10 +24,11 @@ def main():
     df, _ = train.load_and_clean(data_path)
     X_train, X_val, X_test, y_train, y_val, y_test = train.split_data(df, base['params']['seed'])
     assert not (set(X_train.index) & set(X_val.index) or set(X_train.index) & set(X_test.index) or set(X_val.index) & set(X_test.index))
-    models = [mlflow.sklearn.load_model(r['model_uri']) for r in (base, repeat)]
+    baseline_models = [mlflow.sklearn.load_model(r['model_uri']) for r in (base, repeat)]
     with threadpool_limits(limits=1):
-        a, b = [m.predict_proba(X_val) for m in models]
-    np.testing.assert_array_equal(a,b)
+        baseline_probabilities, repeated_probabilities = [m.predict_proba(X_val) for m in baseline_models]
+    np.testing.assert_array_equal(baseline_probabilities, repeated_probabilities)
+    # Se elige por F1 de validación; la repetición no participa en la selección.
     candidates = runs[:-1]
     best = max(candidates, key=lambda r: r['metrics']['f1'])
     model = mlflow.sklearn.load_model(best['model_uri'])
@@ -46,8 +48,8 @@ def main():
     pd.DataFrame(rows).to_csv(ROOT / 'results/comparison.csv', index=False)
     summary = {'best': best, 'test_metrics': test_metrics, 'test_rows': len(X_test),
                'reproducibility': {'metrics_equal': True, 'probabilities_exactly_equal': True,
-                                   'max_absolute_difference': float(np.max(np.abs(a-b))),
-                                   'validation_probabilities_sha256': hashlib.sha256(a.tobytes()).hexdigest()},
+                                   'max_absolute_difference': float(np.max(np.abs(baseline_probabilities - repeated_probabilities))),
+                                   'validation_probabilities_sha256': hashlib.sha256(baseline_probabilities.tobytes()).hexdigest()},
                'split_disjoint': True}
     (ROOT / 'results/summary.json').write_text(json.dumps(summary, indent=2))
     print(pd.DataFrame(rows).drop(columns='run_id').to_string(index=False))
