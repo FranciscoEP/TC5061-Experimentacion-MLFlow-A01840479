@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+.DS_Store
+data/*.csv
+mlflow.db*
+mlartifacts/
+mlruns/
+tmp/
+output/*.zip
+results/*.json
+!results/batch.json
+!results/summary.json
+!results/test_metrics.json

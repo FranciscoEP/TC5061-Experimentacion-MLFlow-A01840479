@@ -1,0 +1,49 @@
+{
+  "best": {
+    "run_id": "53bc8f56978d4e41bc9f6a0e3b84aeaf",
+    "run_name": "04_balanced",
+    "model_uri": "models:/m-801e74e9a3b649bb8952727605b79e5f",
+    "params": {
+      "C": 1.0,
+      "class_weight": "balanced",
+      "tol": 0.0001,
+      "max_iter": 1000,
+      "seed": 42,
+      "solver": "lbfgs",
+      "train_fraction": 0.6,
+      "validation_fraction": 0.2,
+      "test_fraction": 0.2,
+      "threshold": 0.5,
+      "data_sha256": "7c2ae42a7353905ea136e5c2287f17c92c5435826598bfbb8491c6f0c7b1fc06",
+      "train_rows": 52324,
+      "validation_rows": 17442,
+      "raw_rows": 119390,
+      "duplicates_removed": 31994,
+      "clean_rows": 87208,
+      "other_rows_removed": 188
+    },
+    "metrics": {
+      "accuracy": 0.6998050682261209,
+      "precision": 0.46975973487986744,
+      "recall": 0.7090454355981659,
+      "f1": 0.5651162790697675,
+      "roc_auc": 0.769633323900249
+    },
+    "n_iter": 61
+  },
+  "test_metrics": {
+    "accuracy": 0.696938424492604,
+    "precision": 0.4670091941590049,
+    "recall": 0.7198832847019592,
+    "f1": 0.5665081187469247,
+    "roc_auc": 0.776966395889672
+  },
+  "test_rows": 17442,
+  "reproducibility": {
+    "metrics_equal": true,
+    "probabilities_exactly_equal": true,
+    "max_absolute_difference": 0.0,
+    "validation_probabilities_sha256": "4f48a3e10d8ee6082e1b1a436089ff72394f5c8d1ef15f1c382ebdb1c74a8435"
+  },
+  "split_disjoint": true
+}
